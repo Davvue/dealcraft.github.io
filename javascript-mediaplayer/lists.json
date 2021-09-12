@@ -1,0 +1,40 @@
+{
+    "playlists" : {
+        "all" : {
+            "files" : [
+                "Test Vid.mp4",
+                "I tryed.wav",
+                "+1 more.wav",
+                "I've got success.wav"
+            ],
+            "titles" : [
+                "Test Video",
+                "I tryed",
+                "+1 more",
+                "I've got success"
+            ]
+        },
+
+        "Another Way" : {
+            "files" : [
+                "I tryed.wav",
+                "+1 more.wav",
+                "I've got success.wav"
+            ],
+            "titles" : [
+                "I tryed",
+                "+1 more",
+                "I've got success"
+            ]
+        },
+
+        "Test" : {
+            "files" : [
+                "Test Vid.mp4"
+            ],
+            "titles" : [
+                "Test Video"
+            ]
+        }
+    }
+}
