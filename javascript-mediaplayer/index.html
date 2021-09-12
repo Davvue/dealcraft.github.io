@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="player.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Mediaplayer</title>
+</head>
+<body>
+    <div id="bg"></div>
+    <div id="bgg"></div>
+    <div id="container">
+        <output id="header">NaN</output>
+        <video id="vid"></video>
+        <output id="timeOut">Zeit: 0:00/0:NaN</output>
+        <output id="vidNum">Video: 1/NaN</output>
+        <div id="playbuttons">
+            <button id="btnPlay"><i class="far fa-play-circle"></i></button>
+            <button id="btnPause"><i class="far fa-pause-circle"></i></button>
+            <button id="btnStop"><i class="far fa-stop-circle"></i></button>
+        </div>
+        <div id="nextButtons">
+            <button id="btnPrev"><i class="fas fa-backward"></i></button>
+
+            <button id="btnNext"><i class="fas fa-forward"></i></button>
+        </div>
+        <div id="nav">
+
+        </div>
+    </div>
+    <p class="version">Version 2</p>
+
+    <script src="player.js"></script>
+    <script>
+        const player = new Player('#vid', './files', './', 'lists.json', {autoplay: true, debug: true, fireUpdateEvent: true, updateFrequenzy: 500})
+
+        const myVideo = document.getElementById('vid')
+        const btnPlay = document.getElementById('btnPlay')
+        const btnPause = document.getElementById('btnPause')
+        const btnStop = document.getElementById('btnStop')
+        const btnNext = document.getElementById('btnNext')
+        const btnPrev = document.getElementById('btnPrev')
+        const timeOut = document.getElementById('timeOut')
+        const vidNumOut = document.getElementById('vidNum')
+        const Header = document.getElementById('header')
+        const nav = document.querySelector('#nav')
+
+        prepareNav()
+
+        btnPlay.addEventListener('click', () => {player.play()});
+        btnPause.addEventListener('click',() => {player.pause()});
+        btnStop.addEventListener('click',() => {player.stop()});
+        btnNext.addEventListener('click',() => {player.next()});
+        btnPrev.addEventListener('click',() => {player.prev()});
+
+        myVideo.addEventListener('update', (e) => {
+            Header.innerHTML = e.detail.title
+            timeOut.innerHTML = `Zeit: ${myTime(e.detail.currentTime)}/${myTime(e.detail.duration)}`
+            vidNumOut.innerHTML = `Video: ${e.detail.playInfo.vid}/${e.detail.playInfo.of}`
+
+        })
+
+        myVideo.addEventListener('newVid', (e) => {
+            const remove = document.querySelector('.highlight')
+            const add = document.getElementById(e.detail.playInfo.vid - 1)
+
+            remove.classList.remove('highlight')
+            add.classList.add('highlight')
+        })
+
+        function prepareNav() {
+            var isFirstVid = true
+            nav.innerHTML = ''
+            var res = player.getList()
+            res.titles.forEach(title => {
+                const p = document.createElement('p')
+                const hr = document.createElement('hr')
+                p.innerHTML = title
+                p.id = res.titles.indexOf(title)
+                p.addEventListener('click', () => {player.play(res.titles.indexOf(title))})
+                if(isFirstVid) {p.classList.add('highlight'); isFirstVid = false}
+                nav.append(p)
+                nav.append(hr)
+            })
+        }
+
+        function myTime(time){
+            var hr = ~~(time / 3600);
+            var min = ~~((time % 3600) / 60);
+            var sec = time % 60;
+            var sec_min = "";
+            if (hr > 0){
+                sec_min += "" + hrs + ":" + (min < 10 ? "0" : "");
+            }
+            sec_min += "" + min + ":" + (sec < 10 ? "0" : "");
+            sec_min += "" + Math.round(sec);
+            return sec_min;
+        }
+    </script>
+    <script src="https://kit.fontawesome.com/3d6c76b4b3.js" crossorigin="anonymous"></script>
+</body>
+</html>
