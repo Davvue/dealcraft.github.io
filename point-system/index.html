@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="styles/style.min.css" />
+		<title>Point system</title>
+	</head>
+	<body>
+		<div class="container">
+			<h2>Shop</h2>
+			<div class="buyable-items" data-item-container></div>
+		</div>
+
+		<div class="container user">
+			<div class="current-balance" data-current-balance></div>
+			<div class="owned-items" data-owned-items></div>
+		</div>
+
+		<div class="container balance-control">
+			<h2>Balance Control</h2>
+			<input type="number" value="0" min="0" data-amount />
+			<div>
+				<button data-withdraw>withdraw</button>
+				<button data-deposit>deposit</button>
+			</div>
+		</div>
+
+		<script src="js/script.js"></script>
+		<script>
+			const items = [
+				{
+					name: "Python",
+					price: -1000,
+				},
+				{
+					name: "C",
+					price: -10000,
+				},
+				{
+					name: "C++",
+					price: -10000,
+				},
+				{
+					name: "Java",
+					price: -5000,
+				},
+				{
+					name: "C#",
+					price: -10000,
+				},
+				{
+					name: "JavaScript",
+					price: -1000,
+				},
+				{
+					name: "Assembly Language",
+					price: -1000000,
+				},
+				{
+					name: "PHP",
+					price: 500,
+				},
+			];
+			const withdrawButton = document.querySelector("[data-withdraw]");
+			const depositButton = document.querySelector("[data-deposit]");
+			const itemContainer = document.querySelector(
+				"[data-item-container]"
+			);
+			const currentBalanceContainer = document.querySelector(
+				"[data-current-balance]"
+			);
+			const ownedItemsContainer =
+				document.querySelector("[data-owned-items]");
+			const amountInput = document.querySelector("[data-amount]");
+			const ptm = new PTM(items, { logLevel: 4 }, updateValues);
+
+			withdrawButton.addEventListener("click", () => {
+				ptm.chargeUser(amountInput.value * -1);
+			});
+
+			depositButton.addEventListener("click", () => {
+				ptm.chargeUser(amountInput.value);
+			});
+
+			function createItemList(items, parent) {
+				parent.innerHTML = "";
+
+				for (const item of items) {
+					const itemElement = document.createElement("div");
+					itemElement.classList.add("item");
+
+					const textContainer = document.createElement("div");
+
+					const nameElement = document.createElement("p");
+					nameElement.innerText = item.name;
+					textContainer.appendChild(nameElement);
+
+					const priceTag = document.createElement("span");
+					priceTag.innerText =
+						(item.price > 0 ? -item.price : item.price * -1) + "pt";
+					textContainer.appendChild(priceTag);
+
+					itemElement.appendChild(textContainer);
+
+					const buttonElement = document.createElement("button");
+					buttonElement.innerText = "Buy";
+					buttonElement.addEventListener("click", () => {
+						ptm.buyItem(item.name);
+					});
+					buttonElement.disabled = ptm.hasItem(item.name);
+					itemElement.dataset.item = item.name;
+					itemElement.appendChild(buttonElement);
+
+					parent.appendChild(itemElement);
+				}
+			}
+
+			function updateValues(user, itemsPTM) {
+				console.log(user, itemsPTM);
+				createItemList(items, itemContainer);
+				createItemList(ptm.getUserItems(), ownedItemsContainer);
+				renderBalance();
+			}
+
+			function renderBalance() {
+				currentBalanceContainer.innerHTML = `<h2>Current Balance: ${ptm.getBalance()}pt</h2>`;
+			}
+
+			updateValues();
+		</script>
+	</body>
+</html>
