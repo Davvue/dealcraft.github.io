@@ -74,7 +74,11 @@
 			const ownedItemsContainer =
 				document.querySelector("[data-owned-items]");
 			const amountInput = document.querySelector("[data-amount]");
-			const ptm = new PTM(items, { logLevel: 4 }, updateValues);
+			const ptm = new PTM(
+				items,
+				{ logLevel: 4, removeUnavailableItems: false },
+				updateValues
+			);
 
 			withdrawButton.addEventListener("click", () => {
 				ptm.chargeUser(amountInput.value * -1);
@@ -120,12 +124,12 @@
 			function updateValues(user, itemsPTM) {
 				console.log(user, itemsPTM);
 				createItemList(items, itemContainer);
-				createItemList(ptm.getUserItems(), ownedItemsContainer);
+				createItemList(ptm.userItems, ownedItemsContainer);
 				renderBalance();
 			}
 
 			function renderBalance() {
-				currentBalanceContainer.innerHTML = `<h2>Current Balance: ${ptm.getBalance()}pt</h2>`;
+				currentBalanceContainer.innerHTML = `<h2>Current Balance: ${ptm.balance}pt</h2>`;
 			}
 
 			updateValues();

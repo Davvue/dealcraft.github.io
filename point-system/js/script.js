@@ -1,7 +1,7 @@
 "use strict";
 
 class PTM {
-	#version = "2.0.0-beta.1";
+	#version = "2.1.0";
 	#options = {
 		startBalance: 100,
 		storage: localStorage,
@@ -10,6 +10,7 @@ class PTM {
 		name: "PTM",
 		currencyName: "pt",
 		removeUnavailableItems: false,
+		loggingTo: console,
 	};
 	#items = [];
 	#callback;
@@ -25,11 +26,13 @@ class PTM {
 		this.#options = { ...this.#options, ...options };
 		this.#items = items;
 		this.#callback = function () {
-			try {
-				this.#log("calling callback");
-				callback(this.#user, this.#items);
-			} catch (e) {
-				this.#error(false, e);
+			if (callback) {
+				try {
+					this.#log("calling callback");
+					callback(this.#user, this.#items);
+				} catch (e) {
+					this.#error(false, e);
+				}
 			}
 		};
 		this.#loadUser();
@@ -91,14 +94,58 @@ class PTM {
 		return this;
 	}
 
-	getBalance() {
+	get balance() {
 		this.#log(`getting balance`);
 		return this.#user.balance;
 	}
 
-	getUserItems() {
+	get userItems() {
 		this.#log(`getting user items`);
 		return this.#user.ownedItems;
+	}
+
+	get items() {
+		this.#log("getting items");
+		return this.#items
+	}
+
+	get user() {
+		this.#log("getting user");
+		return this.#user;
+	}
+
+	get VERSION() {
+		this.#log("getting version");
+		return this.#version;
+	}
+
+	set items(items) {
+		this.#log(`updating items`);
+		if (Array.isArray(items)) return this.#error("Items must be an array");
+		this.#items = items;
+	}
+
+	set options(options) {
+		this.#log("updating options");
+		if (typeof options !== "object")
+			return this.#error("Options must be an object");
+		this.#options = { ...this.#options, ...options };
+	}
+
+	set callback(callback) {
+		this.#log("updating callback");
+		if (typeof callback !== "function")
+			return this.#error("Callback must be a function");
+		this.#callback = function () {
+			if (callback) {
+				try {
+					this.#log("calling callback");
+					callback(this.#user, this.#items);
+				} catch (e) {
+					this.#error(false, e);
+				}
+			}
+		};
 	}
 
 	#saveUser() {
@@ -147,9 +194,9 @@ class PTM {
 		return timestamp;
 	}
 
-	#deprecatedWarning(descriptor) {
+	#deprecatedWarning(descriptor, useInstead) {
 		let deprecatedWarning = new Error(
-			`${descriptor} is deprecated and will be removed in the future}`
+			`${descriptor} is deprecated and will be removed in the future. Use PTM.prototype.${useInstead} instead`
 		);
 		deprecatedWarning.name = "Deprecated warning";
 		return deprecatedWarning;
@@ -174,7 +221,7 @@ class PTM {
 				else output.push(arg);
 				concat = false;
 			}
-			console.log(...output);
+			this.#options.loggingTo.log(...output);
 		}
 	}
 
@@ -197,7 +244,7 @@ class PTM {
 				else output.push(arg);
 				concat = false;
 			}
-			console.info(...output);
+			this.#options.loggingTo.info(...output);
 		}
 	}
 
@@ -220,7 +267,7 @@ class PTM {
 				else output.push(arg);
 				concat = false;
 			}
-			console.warn(...output);
+			this.#options.loggingTo.warn(...output);
 		}
 	}
 
@@ -243,29 +290,60 @@ class PTM {
 				else output.push(arg);
 				concat = false;
 			}
-			console.error(...output);
+			this.#options.loggingTo.error(...output);
 		}
 	}
 
 	/** Deprecated methods */
 	withdraw(amount) {
-		this.#warn(true, this.#deprecatedWarning("function withdraw"));
+		this.#warn(
+			true,
+			this.#deprecatedWarning(
+				"function withdraw",
+				`chargeUser(${-amount})`
+			)
+		);
 		return this.chargeUser(-amount);
 	}
 
 	deposit(amount) {
-		this.#warn(true, this.#deprecatedWarning("function dposit"));
+		this.#warn(
+			true,
+			this.#deprecatedWarning("function dposit", `chargeUser(${amount})`)
+		);
 		return this.chargeUser(amount);
 	}
 
 	buy(itemName) {
-		this.#warn(true, this.#deprecatedWarning("function buy"));
+		this.#warn(
+			true,
+			this.#deprecatedWarning("function buy", `buyItem(${itemName})`)
+		);
 		return this.buyItem(itemName);
 	}
 
 	userHas(itemName) {
-		this.#warn(true, this.#deprecatedWarning("function userHas"));
+		this.#warn(
+			true,
+			this.#deprecatedWarning("function userHas", `hasItem(${itemName})`)
+		);
 		return this.hasItem(itemName);
+	}
+
+	getUserItems() {
+		this.#warn(
+			true,
+			this.#deprecatedWarning("function getUserItems", "userItems")
+		);
+		return this.userItems;
+	}
+
+	getBalance() {
+		this.#warn(
+			true,
+			this.#deprecatedWarning("function getBalance", "balance")
+		);
+		return this.balance;
 	}
 
 	safeUser() {
