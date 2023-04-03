@@ -1,7 +1,7 @@
 "use strict";
 
 class PTM {
-	#version = "2.1.0";
+	#version = "2.2.1";
 	#options = {
 		startBalance: 100,
 		storage: localStorage,
@@ -47,6 +47,7 @@ class PTM {
 
 	buyItem(itemName) {
 		this.#log(`buying item '${itemName}'`);
+
 		if (this.hasItem(itemName))
 			return this.#log(`user already has '${itemName}'`);
 
@@ -63,9 +64,37 @@ class PTM {
 		return this;
 	}
 
+	sellItem(itemName) {
+		this.#log(`selling item '${itemName}'`);
+
+		const item = this.getItem(itemName);
+		if (!item) return;
+
+		if (!this.hasItem(itemName))
+			this.#log(`user does not own item '${itemName}'`);
+
+		this.chargeUser(-item.price);
+
+		const itemIndex = this.#user.ownedItems.findIndex(
+			(item) => item.name === itemName
+		);
+		if (!itemIndex < 0)
+			return this.#error(
+				false,
+				"an unexpected error occurred. Please report this error at https://github.com/Dealcraft/Points-system/issues"
+			);
+
+		this.#user.ownedItems.splice(itemIndex, 1);
+		this.#saveUser();
+		this.#callback();
+		return this;
+	}
+
 	getItem(itemName) {
-		this.#log(`searching ${itemName}`);
-		const item = this.#items.find((item) => item.name === itemName);
+		this.#log(`searching '${itemName}'`);
+		const item =
+			this.#items.find((item) => item.name === itemName) ||
+			this.#user.ownedItems.find((item) => item.name === itemName);
 		if (!item)
 			return this.#warn(false, `item '${itemName}' does not exist`);
 		return item;
@@ -106,7 +135,7 @@ class PTM {
 
 	get items() {
 		this.#log("getting items");
-		return this.#items
+		return this.#items;
 	}
 
 	get user() {

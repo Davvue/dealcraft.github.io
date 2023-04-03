@@ -109,11 +109,12 @@
 					itemElement.appendChild(textContainer);
 
 					const buttonElement = document.createElement("button");
-					buttonElement.innerText = "Buy";
+					let hasItem = ptm.hasItem(item.name);
+					buttonElement.innerText = hasItem ? "Sell" : "Buy";
 					buttonElement.addEventListener("click", () => {
-						ptm.buyItem(item.name);
+						if (hasItem) ptm.sellItem(item.name);
+						else ptm.buyItem(item.name);
 					});
-					buttonElement.disabled = ptm.hasItem(item.name);
 					itemElement.dataset.item = item.name;
 					itemElement.appendChild(buttonElement);
 
