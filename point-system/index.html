@@ -29,40 +29,68 @@
 
 		<script src="js/script.js"></script>
 		<script>
+			const now = new Date();
+			const nowPlus5 = now;
+			nowPlus5.setHours(now.getHours() + 5);
+			const nowPlus1 = now;
+			nowPlus1.setHours(now.getHours() + 1);
+
 			const items = [
 				{
+					id: 1,
 					name: "Python",
 					price: -1000,
 				},
 				{
+					id: 2,
 					name: "C",
 					price: -10000,
 				},
 				{
+					id: 3,
 					name: "C++",
 					price: -10000,
 				},
 				{
+					id: 4,
 					name: "Java",
 					price: -5000,
 				},
 				{
+					id: 5,
 					name: "C#",
 					price: -10000,
 				},
 				{
+					id: 6,
 					name: "JavaScript",
 					price: -1000,
 				},
 				{
+					id: 7,
 					name: "Assembly Language",
 					price: -1000000,
 				},
 				{
+					id: 8,
 					name: "PHP",
 					price: 500,
 				},
+				{
+					id: 9,
+					name: "Invalid item",
+					price: 1000,
+					validUntil: nowPlus5.toISOString(),
+					validFrom: nowPlus1.toISOString(),
+				},
+				{
+					id: 10,
+					name: "Valid Item",
+					price: 1000,
+					validUntil: nowPlus5.toISOString(),
+				},
 			];
+
 			const withdrawButton = document.querySelector("[data-withdraw]");
 			const depositButton = document.querySelector("[data-deposit]");
 			const itemContainer = document.querySelector(
@@ -74,10 +102,23 @@
 			const ownedItemsContainer =
 				document.querySelector("[data-owned-items]");
 			const amountInput = document.querySelector("[data-amount]");
+
 			const ptm = new PTM(
 				items,
-				{ logLevel: 4, removeUnavailableItems: false },
-				updateValues
+				{
+					logLevel: 4,
+					removeUnavailableItems: false,
+					removeInvalidItems: false,
+				},
+				(user, itemsPTM, tempPTM) => {
+					createItemList(itemsPTM, itemContainer, tempPTM);
+					createItemList(
+						user.ownedItems,
+						ownedItemsContainer,
+						tempPTM
+					);
+					renderBalance(tempPTM);
+				}
 			);
 
 			withdrawButton.addEventListener("click", () => {
@@ -88,7 +129,7 @@
 				ptm.chargeUser(amountInput.value);
 			});
 
-			function createItemList(items, parent) {
+			function createItemList(items, parent, tempPTM) {
 				parent.innerHTML = "";
 
 				for (const item of items) {
@@ -109,31 +150,22 @@
 					itemElement.appendChild(textContainer);
 
 					const buttonElement = document.createElement("button");
-					let hasItem = ptm.hasItem(item.name);
+					let hasItem = tempPTM.hasItem(item.id);
 					buttonElement.innerText = hasItem ? "Sell" : "Buy";
 					buttonElement.addEventListener("click", () => {
-						if (hasItem) ptm.sellItem(item.name);
-						else ptm.buyItem(item.name);
+						if (hasItem) ptm.sellItem(item.id);
+						else ptm.buyItem(item.id);
 					});
-					itemElement.dataset.item = item.name;
+					itemElement.dataset.item = item.id;
 					itemElement.appendChild(buttonElement);
 
 					parent.appendChild(itemElement);
 				}
 			}
 
-			function updateValues(user, itemsPTM) {
-				console.log(user, itemsPTM);
-				createItemList(items, itemContainer);
-				createItemList(ptm.userItems, ownedItemsContainer);
-				renderBalance();
+			function renderBalance(tempPTM) {
+				currentBalanceContainer.innerHTML = `<h2>Current Balance: ${tempPTM.balance}pt</h2>`;
 			}
-
-			function renderBalance() {
-				currentBalanceContainer.innerHTML = `<h2>Current Balance: ${ptm.balance}pt</h2>`;
-			}
-
-			updateValues();
 		</script>
 	</body>
 </html>

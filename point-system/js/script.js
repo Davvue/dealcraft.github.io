@@ -1,16 +1,18 @@
 "use strict";
 
 class PTM {
-	#version = "2.2.1";
+	#version = "2.3.1";
 	#options = {
 		startBalance: 100,
 		storage: localStorage,
 		storagePrefix: "ptm-",
-		logLevel: 1,
+		logLevel: 2,
 		name: "PTM",
 		currencyName: "pt",
 		removeUnavailableItems: false,
+		removeInvalidItems: true,
 		loggingTo: console,
+		itemIdentifierField: "id",
 	};
 	#items = [];
 	#callback;
@@ -29,7 +31,24 @@ class PTM {
 			if (callback) {
 				try {
 					this.#log("calling callback");
-					callback(this.#user, this.#items);
+					const mappedItems = this.#items.map((item) => {
+						return {
+							...item,
+							isValid: this.#isItemValid(item),
+						};
+					});
+
+					const mappedUser = {
+						...this.#user,
+						ownedItems: this.#user.ownedItems.map((item) => {
+							return {
+								...item,
+								isValid: this.#isItemValid(item),
+							};
+						}),
+					};
+
+					callback(mappedUser, mappedItems, this);
 				} catch (e) {
 					this.#error(false, e);
 				}
@@ -40,22 +59,30 @@ class PTM {
 		this.#callback();
 	}
 
-	hasItem(itemName) {
-		this.#log(`checking user items for '${itemName}'`);
-		return this.#user.ownedItems.some((item) => item.name === itemName);
+	hasItem(itemIdentifier) {
+		this.#log(`checking user items for '${itemIdentifier}'`);
+		return this.#user.ownedItems.some(
+			(item) => item[this.#options.itemIdentifierField] === itemIdentifier
+		);
 	}
 
-	buyItem(itemName) {
-		this.#log(`buying item '${itemName}'`);
+	buyItem(itemIdentifier) {
+		this.#log(`buying item '${itemIdentifier}'`);
 
-		if (this.hasItem(itemName))
-			return this.#log(`user already has '${itemName}'`);
+		if (this.hasItem(itemIdentifier))
+			return this.#warn(false, `user already has '${itemIdentifier}'`);
 
-		const item = this.getItem(itemName);
+		const item = this.getItem(itemIdentifier);
+
+		if (!this.#isItemValid(item))
+			return this.#warn(
+				false,
+				`attempting to buy invalid item '${itemIdentifier}'`
+			);
 		if (!item) return;
 
 		if (this.#user.balance + item.price < 0)
-			return this.#log(`insufficient balance`);
+			return this.#warn(false, `insufficient balance`);
 
 		this.chargeUser(item.price);
 		this.#user.ownedItems.push(item);
@@ -64,19 +91,19 @@ class PTM {
 		return this;
 	}
 
-	sellItem(itemName) {
-		this.#log(`selling item '${itemName}'`);
+	sellItem(itemIdentifier) {
+		this.#log(`selling item '${itemIdentifier}'`);
 
-		const item = this.getItem(itemName);
+		const item = this.getItem(itemIdentifier);
 		if (!item) return;
 
-		if (!this.hasItem(itemName))
-			this.#log(`user does not own item '${itemName}'`);
+		if (!this.hasItem(itemIdentifier))
+			this.#warn(false, `user does not own item '${itemIdentifier}'`);
 
 		this.chargeUser(-item.price);
 
 		const itemIndex = this.#user.ownedItems.findIndex(
-			(item) => item.name === itemName
+			(item) => item[this.#options.itemIdentifierField] === itemIdentifier
 		);
 		if (!itemIndex < 0)
 			return this.#error(
@@ -90,13 +117,21 @@ class PTM {
 		return this;
 	}
 
-	getItem(itemName) {
-		this.#log(`searching '${itemName}'`);
+	getItem(itemIdentifier) {
+		this.#log(`searching '${itemIdentifier}'`);
 		const item =
-			this.#items.find((item) => item.name === itemName) ||
-			this.#user.ownedItems.find((item) => item.name === itemName);
+			this.#items.find(
+				(item) =>
+					item[this.#options.itemIdentifierField] === itemIdentifier
+			) ||
+			this.#user.ownedItems.find(
+				(item) =>
+					item[this.#options.itemIdentifierField] === itemIdentifier
+			);
 		if (!item)
-			return this.#warn(false, `item '${itemName}' does not exist`);
+			return this.#warn(false, `item '${itemIdentifier}' does not exist`);
+
+		item.isValid = this.#isItemValid(item);
 		return item;
 	}
 
@@ -130,12 +165,22 @@ class PTM {
 
 	get userItems() {
 		this.#log(`getting user items`);
-		return this.#user.ownedItems;
+		return this.#user.ownedItems.map((item) => {
+			return {
+				...item,
+				isValid: this.#isItemValid(item),
+			};
+		});
 	}
 
 	get items() {
 		this.#log("getting items");
-		return this.#items;
+		return this.#items.map((item) => {
+			return {
+				...item,
+				isValid: this.#isItemValid(item),
+			};
+		});
 	}
 
 	get user() {
@@ -169,12 +214,54 @@ class PTM {
 			if (callback) {
 				try {
 					this.#log("calling callback");
-					callback(this.#user, this.#items);
+
+					const mappedItems = this.#items.map((item) => {
+						return {
+							...item,
+							isValid: this.#isItemValid(item),
+						};
+					});
+
+					const mappedUser = {
+						...this.#user,
+						ownedItems: this.#user.ownedItems.map((item) => {
+							return {
+								...item,
+								isValid: this.#isItemValid(item),
+							};
+						}),
+					};
+
+					callback(mappedUser, mappedItems, this);
 				} catch (e) {
 					this.#error(false, e);
 				}
 			}
 		};
+	}
+
+	#isItemValid(item) {
+		this.#log(
+			`checking validity for item '${
+				item[this.#options.itemIdentifierField]
+			}'`
+		);
+
+		if (!item.validUntil && !item.validFrom) return true;
+
+		const now = new Date();
+
+		if (item.validUntil) {
+			const validUntil = new Date(item.validUntil);
+			if (now.valueOf() - validUntil.valueOf() >= 0) return false;
+		}
+
+		if (item.validFrom) {
+			const validFrom = new Date(item.validFrom);
+			if (now.valueOf() - validFrom.valueOf() < 0) return false;
+		}
+
+		return true;
 	}
 
 	#saveUser() {
@@ -197,13 +284,30 @@ class PTM {
 		if (base64) {
 			this.#log("parsing storage data");
 			this.#user = JSON.parse(atob(base64));
+
 			if (this.#options.removeUnavailableItems) {
 				this.#log("removing unavailable items");
 				this.#user.ownedItems = this.#user.ownedItems.filter((oi) =>
-					this.#items.some((item) => item.name === oi.name)
+					this.#items.some(
+						(item) =>
+							item[this.#options.itemIdentifierField] ===
+							oi[this.#options.itemIdentifierField]
+					)
 				);
 				this.#saveUser();
 			}
+
+			if (this.#options.removeInvalidItems) {
+				this.#log("removing invalid items");
+				this.#user.ownedItems = this.#user.ownedItems.filter((oi) => {
+					const item = this.getItem(
+						oi[this.#options.itemIdentifierField]
+					);
+					return this.#isItemValid(item);
+				});
+				this.#saveUser();
+			}
+
 			this.#log("parsed user from storage ", this.#user);
 		} else {
 			this.#log("no user found");
